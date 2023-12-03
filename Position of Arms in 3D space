@@ -5,10 +5,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D as plt3D
 
-import cv2
-import mediapipe as mp
-import math
-
 cap = cv2.VideoCapture(0)
 
 # Initialize Mediapipe Pose model
@@ -32,10 +28,7 @@ c = 0
 
 armPositionFigure = plt.figure()
 armAxis = armPositionFigure.add_subplot(111, projection = '3d')
-armAxis.view_init(elev=120, azim = 30)
-
-#plt.rcParams["figure.figsize"] = [7.50, 3.50]
-#plt.rcParams["figure.autolayout"] = True
+armAxis.view_init(elev=90, azim = 30)
 
 while True:
     exist, frame = cap.read()
@@ -182,7 +175,7 @@ while True:
         #   (x,y,z of Shoulder) to (x,y,z of Elbow) to (x,y,z of Wrist)
         armAxis.plot([leftShoulder_x, leftElbow_x, leftWrist_x], # X Coordinates
                      [leftShoulder_y, leftElbow_y, leftWrist_y], # Y Coordinates
-                     [0, 0, 0], c='g')                              # Z Coordinates
+                     [0, 0, 0], c='g')                           # Z Coordinates
 
         
         # Drawing Lines between all of the Right Arm 3D points
@@ -196,8 +189,22 @@ while True:
         armAxis.set_ylim([0, h])
         armAxis.set_zlim([-w, w])
 
+        rightArmA = math.dist((rightElbow_x, rightElbow_y), (rightShoulder_x, rightShoulder_y))
         
+        rightArmB = math.dist((rightElbow_x, rightElbow_y), (rightWrist_x, rightWrist_y))
 
+        rightArmC = math.dist((rightWrist_x, rightWrist_y),(rightShoulder_x, rightShoulder_y))
+
+        # Law of Cosines
+        rightTheta = math.acos((math.pow(rightArmC,2) - math.pow(rightArmA,2) - math.pow(rightArmB,2))/(-2 * rightArmA * rightArmB))
+
+        rightTheta = rightTheta * (180 / math.pi) # Converts to Degrees
+
+        rightTheta = round(rightTheta,2)
+
+        print ("Elbow Angle: ", rightTheta)
+        
+    
     
     # Finds all hand features in frame
     resultsHands = hands.process(rgbFrame)
@@ -212,7 +219,7 @@ while True:
             thumbTip_x = int(thumbTip.x * w)
             thumbTip_y = int(thumbTip.y * h)
 
-            armAxis.scatter(thumbTip_x, thumbTip_y, 0)
+            #armAxis.scatter(thumbTip_x, thumbTip_y, 0)
 
 
 
@@ -221,7 +228,7 @@ while True:
             indexTip_x = int(indexTip.x * w)
             indexTip_y = int(indexTip.y * h)
 
-            armAxis.scatter(indexTip_x, indexTip_y, 0)
+            #armAxis.scatter(indexTip_x, indexTip_y, 0)
 
 
 
@@ -230,7 +237,7 @@ while True:
             middleTip_x = int(middleTip.x * w)
             middleTip_y = int(middleTip.y * h)
 
-            armAxis.scatter(middleTip_x, middleTip_y, 0)
+            #armAxis.scatter(middleTip_x, middleTip_y, 0)
 
 
 
@@ -242,9 +249,9 @@ while True:
 
 
 
-            armAxis.plot([thumbTip_x, indexTip_x, indexNuckle_x, middleTip_x],
-                         [thumbTip_y, indexTip_y, indexNuckle_y, middleTip_y],
-                         [0, 0, 0, 0], c='b')
+            #armAxis.plot([thumbTip_x, indexTip_x, indexNuckle_x, middleTip_x],
+            #             [thumbTip_y, indexTip_y, indexNuckle_y, middleTip_y],
+            #             [0, 0, 0, 0], c='b')
 
 
             # Calculate the pixel distance between the thumb and index finger tips
@@ -262,20 +269,6 @@ while True:
             # Check if the thumb and index finger tips are touching
             if relativeDistance < touchThreshold:
                 cv2.putText(frame, "Fingers Touching", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-        
-        # It can't differentiate between both hands so the line is switching between the two wrists. Look into later.
-
-        #handWrist = resultsHands.multi_hand_landmarks[0].landmark[mpHands.HandLandmark.WRIST]
-        #handWrist_x, handWrist_y = int(handWrist.x * w), int(handWrist.y * h)
-
-        #cv2.line(frame, (rightWrist_x, rightWrist_y), (handWrist_x, handWrist_y), (255, 255, 255), 2)
-
-
-    # Next, the angle needs to be computed between the forearm and the bisep to send to a robot?
-        # Law of cosines to find angle inbetween forearm
-    # I think angle should be the same no matter the distance from the camera as a result of it relating the two of them together.
-    
-    # Are we connecting to a robot or just doing a 3D render. If so how do we accomplish either of these?
 
     plt.pause(0.01) # Plots then waits 0.01 seconds
 
