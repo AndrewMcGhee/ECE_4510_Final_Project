@@ -1,0 +1,138 @@
+import cv2
+import mediapipe as mp
+import math
+
+cap = cv2.VideoCapture(0)
+
+# Initialize MediaPipe Pose model
+mp_pose = mp.solutions.pose
+
+# Initialize Pose model
+pose = mp_pose.Pose()
+
+# Initialize MediaPpipe drawing
+mp_drawing = mp.solutions.drawing_utils
+
+
+while True:
+    exist, frame = cap.read()
+    frame = cv2.flip(frame,1)
+
+    # Check if the frame was successfully captured
+    if not (exist):
+        break
+
+    # This is needed because Mediapipe needs image to be in RGB color format
+    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+    # Finds all pose features in frame
+    resultsPose = pose.process(rgb_frame)
+
+
+    # Gets height and width of frame
+    h, w, c = frame.shape
+
+    # Check to see if landmarks are detected
+    if resultsPose.pose_landmarks:
+
+                                                    # Features on Left Side
+
+        # For Left Shoulder
+        leftShoulder = resultsPose.pose_landmarks.landmark[11]
+
+        # Convert landmarks to pixel coordinates and draw landmarks
+        leftShoulder_x, leftShoulder_y = int(leftShoulder.x * w), int(leftShoulder.y * h)
+        cv2.circle(frame, (leftShoulder_x, leftShoulder_y), 5, (0, 0, 255), -1)
+
+        
+
+
+
+        # For Left Elbow
+        leftElbow = resultsPose.pose_landmarks.landmark[13]
+
+        # Convert landmarks to pixel coordinates and draw landmarks
+        leftElbow_x, leftElbow_y = int(leftElbow.x * w), int(leftElbow.y * h)
+        cv2.circle(frame, (leftElbow_x, leftElbow_y), 5, (0, 0, 255), -1)
+
+
+
+
+        # For Left Wrist
+        leftWrist = resultsPose.pose_landmarks.landmark[15]
+
+        # Convert landmarks to pixel coordinates and draw landmarks
+        leftWrist_x, leftWrist_y = int(leftWrist.x * w), int(leftWrist.y * h)
+        cv2.circle(frame, (leftWrist_x, leftWrist_y), 5, (0, 0, 255), -1)
+
+
+
+                                                    # Features on Right Side
+
+
+        # For Right Shoulder
+        rightShoulder = resultsPose.pose_landmarks.landmark[12]
+
+        # Convert landmarks to pixel coordinates and draw landmarks
+        rightShoulder_x, rightShoulder_y = int(rightShoulder.x * w), int(rightShoulder.y * h)
+        cv2.circle(frame, (rightShoulder_x, rightShoulder_y), 5, (0, 0, 255), -1)
+
+
+
+        # For Right Elbow
+        rightElbow = resultsPose.pose_landmarks.landmark[14]
+
+        # Convert landmarks to pixel coordinates and draw landmarks
+        rightElbow_x, rightElbow_y = int(rightElbow.x * w), int(rightElbow.y * h)
+        cv2.circle(frame, (rightElbow_x, rightElbow_y), 5, (0, 0, 255), -1)
+
+
+
+        # For Right Wrist
+        rightWrist = resultsPose.pose_landmarks.landmark[16]
+
+        # Convert landmarks to pixel coordinates and draw landmarks
+        rightWrist_x, rightWrist_y = int(rightWrist.x * w), int(rightWrist.y * h)
+        cv2.circle(frame, (rightWrist_x, rightWrist_y), 5, (0, 0, 255), -1)
+
+
+
+                                    # Connecting each feature point to make a better model of each arm
+        
+        # Connecting Left Shoulder to Left Elbow
+        cv2.line(frame, (leftShoulder_x, leftShoulder_y), (leftElbow_x, leftElbow_y), (255, 255, 255), 2)
+
+        # Connecting Left Elbow to Left Wrist
+        cv2.line(frame, (leftElbow_x, leftElbow_y), (leftWrist_x, leftWrist_y), (255, 255, 255), 2)
+
+
+
+        # Connecting Right Shoulder to Right Elbow
+        cv2.line(frame, (rightShoulder_x, rightShoulder_y), (rightElbow_x, rightElbow_y), (255, 255, 255), 2)        
+
+        # Connecting Right Elbow to Right Wrist
+        cv2.line(frame, (rightElbow_x, rightElbow_y), (rightWrist_x, rightWrist_y), (255, 255, 255), 2)
+
+    rightArmA = math.dist((rightElbow_x, rightElbow_y), (rightShoulder_x, rightShoulder_y))
+        
+    rightArmB = math.dist((rightElbow_x, rightElbow_y), (rightWrist_x, rightWrist_y))
+
+    rightArmC = math.dist((rightWrist_x, rightWrist_y),(rightShoulder_x, rightShoulder_y))
+
+    # Law of Cosines
+    rightTheta = math.acos((math.pow(rightArmC,2) - math.pow(rightArmA,2) - math.pow(rightArmB,2))/(-2 * rightArmA * rightArmB))
+
+    rightTheta = rightTheta * (180 / math.pi) # Converts to Degrees
+
+    rightTheta = round(rightTheta,2)
+
+    print ("Elbow Angle: ", rightTheta)
+
+    cv2.imshow('Arms', frame)
+
+    # Break the loop when 'Esc' key is pressed
+    if cv2.waitKey(1) == 27:
+        break
+
+cap.release()
+cv2.destroyAllWindows()
