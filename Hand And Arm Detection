@@ -1,0 +1,206 @@
+import cv2
+import mediapipe as mp
+import math
+
+cap = cv2.VideoCapture(0)
+
+# Initialize Mediapipe Pose model
+mpPose = mp.solutions.pose
+
+# Initialize Pose model
+pose = mpPose.Pose()
+
+# Initialize Mediapipe hand model
+mpHands = mp.solutions.hands
+
+# Initialize hand model
+hands = mpHands.Hands()
+
+# Initialize Mediapipe drawing
+mpDraw = mp.solutions.drawing_utils
+
+
+while True:
+    exist, frame = cap.read()
+    frame = cv2.flip(frame,1)
+
+    # Check if the frame was successfully captured
+    if not (exist):
+        break
+
+    # This is needed because Mediapipe needs image to be in RGB color format
+    rgbFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+    # Finds all pose features in frame
+    resultsPose = pose.process(rgbFrame)
+
+
+    # Gets height and width of frame
+    h, w, c = frame.shape
+
+
+    # Initalizations so calculations can be done outside of conditional statements to speed up processing time
+
+    leftShoulder_x = 0
+    leftShoulder_y = 0
+
+    leftElbow_x = 0
+    leftElbow_y = 0
+
+    leftWrist_x = 0
+    leftWrist_y = 0
+
+
+
+    rightShoulder_x = 0
+    rightShoulder_y = 0
+
+    rightElbow_x = 0
+    rightElbow_y = 0
+
+    rightWrist_x = 0
+    rightWrist_y = 0
+
+
+    # Checks to see if pose landmarks are detected
+    if resultsPose.pose_landmarks:
+
+                                                    # Features on Left Side
+
+        # For Left Shoulder
+        leftShoulder = resultsPose.pose_landmarks.landmark[12]
+
+        # Convert landmarks to pixel coordinates and draw landmarks
+        leftShoulder_x = int(leftShoulder.x * w)
+        leftShoulder_y = int(leftShoulder.y * h)
+        cv2.circle(frame, (leftShoulder_x, leftShoulder_y), 5, (0, 0, 255), -1)
+
+        
+
+
+
+        # For Left Elbow
+        leftElbow = resultsPose.pose_landmarks.landmark[14]
+
+        # Convert landmarks to pixel coordinates and draw landmarks
+        leftElbow_x = int(leftElbow.x * w)
+        leftElbow_y = int(leftElbow.y * h)
+        cv2.circle(frame, (leftElbow_x, leftElbow_y), 5, (0, 0, 255), -1)
+
+
+
+
+        # For Left Wrist
+        leftWrist = resultsPose.pose_landmarks.landmark[16]
+
+        # Convert landmarks to pixel coordinates and draw landmarks
+        leftWrist_x = int(leftWrist.x * w)
+        leftWrist_y = int(leftWrist.y * h)
+        cv2.circle(frame, (leftWrist_x, leftWrist_y), 5, (0, 0, 255), -1)
+
+
+
+                                                    # Features on Right Side
+
+
+        # For Right Shoulder
+        rightShoulder = resultsPose.pose_landmarks.landmark[11]
+
+        # Convert landmarks to pixel coordinates and draw landmarks
+        rightShoulder_x = int(rightShoulder.x * w)
+        rightShoulder_y = int(rightShoulder.y * h)
+        cv2.circle(frame, (rightShoulder_x, rightShoulder_y), 5, (0, 0, 255), -1)
+
+
+
+        # For Right Elbow
+        rightElbow = resultsPose.pose_landmarks.landmark[13]
+
+        # Convert landmarks to pixel coordinates and draw landmarks
+        rightElbow_x = int(rightElbow.x * w)
+        rightElbow_y = int(rightElbow.y * h)
+        cv2.circle(frame, (rightElbow_x, rightElbow_y), 5, (0, 0, 255), -1)
+
+
+
+        # For Right Wrist
+        rightWrist = resultsPose.pose_landmarks.landmark[15]
+
+        # Convert landmarks to pixel coordinates and draw landmarks
+        rightWrist_x = int(rightWrist.x * w)
+        rightWrist_y = int(rightWrist.y * h)
+        cv2.circle(frame, (rightWrist_x, rightWrist_y), 5, (0, 0, 255), -1)
+
+
+
+                                    # Connecting each feature point to make a better model of each arm
+        
+        # Connecting Left Shoulder to Left Elbow
+        cv2.line(frame, (leftShoulder_x, leftShoulder_y), (leftElbow_x, leftElbow_y), (255, 255, 255), 2)
+
+        # Connecting Left Elbow to Left Wrist
+        cv2.line(frame, (leftElbow_x, leftElbow_y), (leftWrist_x, leftWrist_y), (255, 255, 255), 2)
+
+
+
+        # Connecting Right Shoulder to Right Elbow
+        cv2.line(frame, (rightShoulder_x, rightShoulder_y), (rightElbow_x, rightElbow_y), (255, 255, 255), 2)        
+
+        # Connecting Right Elbow to Right Wrist
+        cv2.line(frame, (rightElbow_x, rightElbow_y), (rightWrist_x, rightWrist_y), (255, 255, 255), 2)
+
+    
+    # Finds all hand features in frame
+    resultsHands = hands.process(rgbFrame)
+
+    # Check to see if hand landmarks are detected
+    if resultsHands.multi_hand_landmarks:
+        for handLandmarks in resultsHands.multi_hand_landmarks:
+            mpDraw.draw_landmarks(frame, handLandmarks, mpHands.HAND_CONNECTIONS)
+
+            # Get the coordinates of the thumb and index finger tips
+            thumb_tip = handLandmarks.landmark[4]
+            index_tip = handLandmarks.landmark[8]
+
+            # Calculate the pixel distance between the thumb and index finger tips
+            distance = math.dist((thumb_tip.x, thumb_tip.y), (index_tip.x, index_tip.y))
+
+            # Set a threshold for finger touch
+            touchThreshold = 0.064  # Experiment with the value
+
+            # Calculate the size of the hand (use the distance between two specified landmarks)
+            hand_size = math.sqrt(math.pow((handLandmarks.landmark[0].x - handLandmarks.landmark[5].x), 2) + math.pow((handLandmarks.landmark[0].y - handLandmarks.landmark[5].y), 2))
+
+            # Calculate the relative distance (distance normalized by hand size)
+            relativeDistance = distance / hand_size
+
+            # Check if the thumb and index finger tips are touching
+            if relativeDistance < touchThreshold:
+                cv2.putText(frame, "Fingers Touching", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+
+
+    # Finding Distance of Each Section of Arms
+    rightArmA = math.dist((rightElbow_x, rightElbow_y), (rightShoulder_x, rightShoulder_y))
+    
+    rightArmB = math.dist((rightElbow_x, rightElbow_y), (rightWrist_x, rightWrist_y))
+
+    rightArmC = math.dist((rightWrist_x, rightWrist_y),(rightShoulder_x, rightShoulder_y))
+
+
+    # Law of Cosines
+    rightTheta = math.acos((math.pow(rightArmC,2) - math.pow(rightArmA,2) - math.pow(rightArmB,2))/(-2 * rightArmA * rightArmB))
+
+    rightTheta = rightTheta * (180 / math.pi) # Converts to Degrees
+
+    rightTheta = round(rightTheta,2)
+
+    print ("Elbow Angle: ", rightTheta)
+
+    cv2.imshow('Arms', frame)
+
+    # Break the loop when 'Esc' key is pressed
+    if cv2.waitKey(1) == 27:
+        break
+
+cap.release()
+cv2.destroyAllWindows()
